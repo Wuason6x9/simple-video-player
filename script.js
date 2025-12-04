@@ -96,21 +96,35 @@ document.addEventListener('DOMContentLoaded', () => {
         return new Promise((resolve, reject) => {
             mainVideo.src = url;
 
-            mainVideo.onplaying = () => {
+            const onPlaying = () => {
+                cleanupListeners();
                 resolve();
             };
 
-            mainVideo.onerror = () => {
-                reject('Native Error');
+            const onError = (e) => {
+                cleanupListeners();
+                const error = mainVideo.error;
+                reject(`Native Error: ${error ? error.message || error.code : 'Unknown'}`);
             };
 
-            mainVideo.play().catch(() => { });
+            const cleanupListeners = () => {
+                mainVideo.removeEventListener('playing', onPlaying);
+                mainVideo.removeEventListener('error', onError);
+            };
+
+            mainVideo.addEventListener('playing', onPlaying);
+            mainVideo.addEventListener('error', onError);
+
+            mainVideo.play().catch(() => {
+                // Ignore initial play promise rejection, wait for error event or timeout
+            });
 
             setTimeout(() => {
                 if (mainVideo.paused && mainVideo.readyState < 3) {
+                    cleanupListeners();
                     reject('Native Timeout');
                 }
-            }, 10000);
+            }, 5000); // Reduced timeout for faster fallback
         });
     };
 
@@ -121,22 +135,53 @@ document.addEventListener('DOMContentLoaded', () => {
         cleanup();
         videoWrapper.classList.add('active');
 
+        // Helper to get extension
+        const getExtension = (url) => {
+            try {
+                const path = new URL(url).pathname;
+                return path.split('.').pop().toLowerCase();
+            } catch {
+                return '';
+            }
+        };
+
+        const ext = getExtension(rawUrl);
         const strategies = [];
-        strategies.push(() => tryMpegts(rawUrl));
-        strategies.push(() => tryHls(rawUrl));
-        strategies.push(() => tryNative(rawUrl));
-        strategies.push(() => tryHls(`https://corsproxy.io/?${encodeURIComponent(rawUrl)}`));
+
+        // Smart Strategy Selection based on extension
+        if (ext === 'm3u8') {
+            // HLS Priority
+            strategies.push(() => tryHls(rawUrl));
+            strategies.push(() => tryHls(`https://corsproxy.io/?${encodeURIComponent(rawUrl)}`));
+        } else if (ext === 'ts' || ext === 'flv') {
+            // MPEG-TS/FLV Priority
+            strategies.push(() => tryMpegts(rawUrl));
+            strategies.push(() => tryNative(rawUrl)); // Fallback to native
+        } else if (ext === 'mp4' || ext === 'mkv' || ext === 'webm' || ext === 'mov') {
+            // Native Priority (MP4, MKV, etc)
+            strategies.push(() => tryNative(rawUrl));
+            strategies.push(() => tryNative(`https://corsproxy.io/?${encodeURIComponent(rawUrl)}`));
+        } else {
+            // Unknown extension: Try Native FIRST (best for MP4/MKV), then Stream formats
+            strategies.push(() => tryNative(rawUrl));
+            strategies.push(() => tryMpegts(rawUrl));
+            strategies.push(() => tryHls(rawUrl));
+            strategies.push(() => tryNative(`https://corsproxy.io/?${encodeURIComponent(rawUrl)}`));
+            strategies.push(() => tryHls(`https://corsproxy.io/?${encodeURIComponent(rawUrl)}`));
+        }
 
         for (const strategy of strategies) {
             try {
                 await strategy();
+                console.log('Video loaded successfully');
                 return;
             } catch (e) {
-                cleanup();
+                console.warn('Strategy failed, trying next...', e);
+                // Continue to next strategy
             }
         }
 
-        alert('Could not play video. Please check the URL.');
+        alert('Could not play video. Please check the URL or file format.');
     };
 
     playBtn.addEventListener('click', loadAndPlayVideo);
