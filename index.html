@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Player</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mpegts.js@1.7.3/dist/mpegts.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="background">
+        <div class="shape shape-1"></div>
+        <div class="shape shape-2"></div>
+        <div class="shape shape-3"></div>
+    </div>
+
+    <main class="glass-container">
+        <header>
+            <h1>Video Player</h1>
+            <p>Paste your direct video link and enjoy</p>
+        </header>
+
+        <div class="input-group">
+            <input type="text" id="videoUrl" placeholder="https://example.com/video.mp4" autocomplete="off">
+            <button id="playBtn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                </svg>
+            </button>
+        </div>
+
+        <div class="video-wrapper" id="videoWrapper">
+            <video id="mainVideo" controls crossorigin="anonymous">
+                Your browser does not support the video tag.
+            </video>
+        </div>
+
+        <div id="debugConsole" class="debug-console" style="display: none;">
+            <h3>Debug Logs</h3>
+            <div id="logContent"></div>
+        </div>
+    </main>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
